@@ -1,0 +1,152 @@
+ArcGIS Engine要素渲染和专题图制作
+作者：风过 无痕    文章来源：博客园    点击数：9350    更新时间：2010-3-30
+摘要：Feature的常用的绘制方法包括：1.简单绘制；2.唯一值绘制/多字段唯一值绘制；3.点密度/多字段点密度绘制；4.数据分级绘制；5.质量图(饼图/直方图)； 6.按比例尺渲染；7.比例符号渲染。
+一.Feature的基本渲染方法
+    Feature的常用的绘制方法包括：1.简单绘制；2.唯一值绘制/多字段唯一值绘制；3.点密度/多字段点密度绘制；4.数据分级绘制；5.质量图(饼图/直方图)； 6.按比例尺渲染；7.比例符号渲染。
+  1.简单渲染 
+    简单渲染是ArcEngine的默认渲染，我们打开一个FeatureClass，建立一个FeatureLayer的时候，如果没有给FeatureLayer设置Renderer那么使用的就是简单渲染。简单渲染对整个图层中的所有Feature使用同一种方式显示。简单渲染在ArcEngine中用ISimpleRenderer来表示，ISimpleRenderer的使用方式如下： 
+//假设layer是一个IFeatureLayer，获取IGeoFeatureLayer
+  IGeoFeatureLayer geoLayer=layer as IGeoFeatureLayer;
+  //构造SimpleRenderer
+  ISimpleRenderer renderer=new SimpleRendererClass();
+  renderer.description="简单的渲染一下";
+  renderer.Label="符号的标签";
+  //假设sym是一个和该图层中Geometry类型对应的符号；
+  renderer.Symbol=sym;
+  //为图层设置渲染，注意需要刷新该图层。
+  geoLayer.Renderer=renderer;
+  2.独立值/多字段独立值渲染
+    独立值/多字段独立值渲染，根据Feature的某一个字段的数据或某几个字段的组合结果来确定符号。具有相同值或相同组合值的Feature，使用一样的符号。在使用多个字段的使用，每个字段的取值之间使用分割符来连接。字段的取值顺序和在Renderer中设置的一样。基本使用方式如下：
+  //假设layer是一个IFeatureLayer，获取IGeoFeatureLayer
+  IGeoFeatureLayer geoLayer=layer as IGeoFeatureLayer;
+  //构造一个UniqueValueRenderer 
+  IUniqueValueRenderer renderer=new UniqueValueRendererClass();
+  //假设使用两个字段来渲染
+  renderer.FieldCount=2;
+  //假设YSLX字段表示要素类型
+  //假设YSYT字段表示要数用途
+  renderer.set_Field(0,"YSLX");
+  renderer.set_Field(1,"YSYT");
+  //字段之间使用 | 来连接(默认取值)
+  renderer.FieldDelimiter="|";
+  //设置默认符号
+  renderer.DefaultSymbol=defaultSymbol;
+  renderer.DefaultLabel="默认Label";
+  //添加值
+  renderer.addValue("房屋|民居","民居房屋",MJSymbol);
+  renderer.addValue("房屋|商业用地","商业用地",SYSymbol);
+  ...
+  //还可以通过set_Symbol,set_Heading、set_Value来修改上述设置。
+  geoLayer.Renderer=renderer.
+  3.点密度/多字段点密度
+    点密度图通过在Feature的图形上打点来表示数据的数多，点越密集表示数据量越大。还可以使用多字段的点密度图。这个使用同一个Feature上就可以显示几种不同的点。注意点密度图有一个特殊的地方，点密度图使用的符号是面状符号。而其中有需要包括点状符号，接口使用如下：
+  IDotDensityRenderer renderer=new DotDensityRendererClass ();
+   IRendererFields flds=(IRendererFields)renderer;
+   flds.AddField("MJ ","面积");
+   flds.AddField("RK","人口");
+   IDotDensityFillSymbol ddSym=new DotDensityFillSymbolClass();
+   ISymbolArray symArray=(ISymbolArray)ddSym;
+   symArray.AddSymbol(mjSymbol);
+   symArray.AddSymbol(rkSymbol);
+   ddSym.Outline =(ILineSymbol)outlineSymbol ;   
+   ddSym.DotSize =10 ;
+   ddSym.FixedPlacement=true;   
+   
+   renderer.DotDensitySymbol =ddSym;
+   renderer.DotValue=20 ;
+   renderer.MaintainSize=this.m_dotdensityParam .MaintainSize ;
+   IGeoFeatureLayer geoLayer=(IGeoFeatureLayer)layer ;
+   geoLayer.Renderer =(IFeatureRenderer)renderer;
+4.数据分级绘制(使用IClassBreaksRenderer)
+5.饼图/直方图(使用IChartRenderer)
+6.按比例尺渲染(使IScaleDependentRenderer)
+7.比例符号渲染(使用 IProportionalSymbolRenderer )
+二.图例的使用
+    图例的使用通过ILegendInfo接口。每个Renderer都实现了该接口，但是有时候该实现不好用，所以也可以自己实现该接口。实现过程是比较简单的。
+三.渲染层次
+    使用ILevelRender 接口。该接口可以指定一 当前的Level(-1)表示绘制全部。然后提供一个符号数组，注意每个符号要指定Level，如果不指定就默认为0。
+四.透明度控制
+    透明度控制使用 ITransparencyRenderer 接口。该接口允许指定一个字段，字段取值用来表示透明度 注意 透明度的取值在0--100之间。
+五.数据正规化
+    数据正规化用 IDataNormalization 接口来表示。该接口提供了几种正规化表示方法。
+六.部分渲染
+    部分渲染通过使用IDataExclusion  来实现。该接口允许提供过滤语句来过滤掉不需要渲染的Feature。同时也可以给他们制定特殊的符号。同时控制是否显示
+七.旋转控制
+    旋转控制通过使用IRotationRenderer 接口来表示。该接口要求提供旋转角度的字段。同时要求提供旋转的方法。
+八.数据样本
+    IDataSampling  没有使用过。
+九.外表关联
+ITable dispTable=((IDisplayTable)feaLayer).DisplayTable ;//图层
+ITable attTable；//外表
+IMemoryRelationshipClassFactory fac=new MemoryRelationshipClassFactoryClass ();
+IRelationshipClass relClass=fac.Open("JZMJ",(IObjectClass)dispTable,"ZDDJH",
+   IObjectClass)attTable,"G03",
+   "Forward","Backward",
+   esriRelCardinality.esriRelCardinalityOneToOne);
+IDisplayRelationshipClass dispRelClass=feaLayer as IDisplayRelationshipClass ;
+dispRelClass.DisplayRelationshipClass(relClass,esriJoinType.esriLeftInnerJoin);
+十.统计分析
+   ITableHistogram  tableHistogram=new BasicTableHistogramClass ();
+  tableHistogram.Table =((IDisplayTable)layer).DisplayTable  ;
+  tableHistogram.Field =fieldName ;
+  object valueArray=null, freq=null;
+  IBasicHistogram basicHistogram=(IBasicHistogram)tableHistogram;
+  basicHistogram.GetHistogram(out valueArray,out freq);
+  IClassify classify=null;
+   int breakNum=6;
+   //分类方法
+   switch(ClassifyMethod )
+   {
+    case ClassifyMethodName.lsClassifyMethodEqualInterval:
+    {
+      EqualIntervalClass  eq=new EqualIntervalClass ();
+      eq.Classify (valueArray,freq,ref breakNum);
+      classify=(IClassify)eq;     
+      break;
+    }
+    case ClassifyMethodName.lsClassifyMethodStandardDeviation:
+    {
+      StandardDeviationClass sd=new StandardDeviationClass ();
+      IStatisticsResults stat= histogram as IStatisticsResults ;
+      classify=sd as IClassify;
+      classify.SetHistogramData (valueArray,freq);
+      IDeviationInterval di=sd as IDeviationInterval ;
+      di.DeviationInterval=1;
+      di.Mean=stat.Mean;
+      di.StandardDev=stat.StandardDeviation;
+      classify.Classify (ref breakNum);     
+      break;
+    }
+    case ClassifyMethodName.lsClassifyMethodQuantile:
+    {
+      Quantile qc=new QuantileClass ();
+      qc.Classify (valueArray,freq,ref breakNum);
+      classify=qc as IClassify ;     
+      break;
+    }
+    case ClassifyMethodName.lsClassifyMethodNaturalBreaks:
+    {
+      NaturalBreaksClass nb=new NaturalBreaksClass ();
+      nb.Classify (valueArray,freq,ref breakNum);
+      classify=nb as IClassify ;     
+      break;
+    }
+    case ClassifyMethodName.lsClassifyMethodDefinedInterval:
+    {
+     DefinedIntervalClass di=new DefinedIntervalClass ();
+     di.IntervalRange =this.m_classBreaksParam .Interval ;
+     di.Classify (valueArray,freq,ref breakNum);
+     classify=di as IClassify ;
+     break;
+    }
+    default:
+    {
+     EqualIntervalClass  eq=new EqualIntervalClass ();
+     eq.Classify (valueArray,freq,ref breakNum);
+     classify=(IClassify)eq;
+     break;
+    }
+   }   
+   object o=classify.ClassBreaks ;
+   System.Array breakArray= o as System.Array;
+   现在breakArray中就是统计后的数据了。
